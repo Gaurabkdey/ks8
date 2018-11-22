@@ -1,0 +1,191 @@
+version: "2"
+networks:
+  fabricnetwork: {}
+services:
+  ca.buyer.com:
+    container_name: ca.buyer.com
+    extends:
+      file: base.yaml
+      service: ca
+    environment:
+    - FABRIC_CA_SERVER_CA_CERTFILE=/etc/hyperledger/fabric-ca-server-config/ca.buyer.com-cert.pem
+    - FABRIC_CA_SERVER_CA_KEYFILE=/etc/hyperledger/fabric-ca-server-config/BUYER_PRIVATE_KEY
+    - FABRIC_CA_SERVER_TLS_CERTFILE=/etc/hyperledger/fabric-ca-server-config/ca.buyer.com-cert.pem
+    - FABRIC_CA_SERVER_TLS_KEYFILE=/etc/hyperledger/fabric-ca-server-config/BUYER_PRIVATE_KEY
+    volumes:
+    - ./crypto-config/peerOrganizations/buyer.com/ca/:/etc/hyperledger/fabric-ca-server-config
+    ports:
+    - 9054:7054
+    networks:
+    - fabricnetwork
+  ca.seller.net:
+    container_name: ca.seller.net
+    extends:
+      file: base.yaml
+      service: ca
+    environment:
+    - FABRIC_CA_SERVER_CA_CERTFILE=/etc/hyperledger/fabric-ca-server-config/ca.seller.net-cert.pem
+    - FABRIC_CA_SERVER_CA_KEYFILE=/etc/hyperledger/fabric-ca-server-config/SELLER_PRIVATE_KEY
+    - FABRIC_CA_SERVER_TLS_CERTFILE=/etc/hyperledger/fabric-ca-server-config/ca.seller.net-cert.pem
+    - FABRIC_CA_SERVER_TLS_KEYFILE=/etc/hyperledger/fabric-ca-server-config/SELLER_PRIVATE_KEY
+    volumes:
+    - ./crypto-config/peerOrganizations/seller.net/ca/:/etc/hyperledger/fabric-ca-server-config
+    ports:
+    - 7054:7054
+    networks:
+    - fabricnetwork
+  ca.transporter.com:
+    container_name: ca.transporter.com
+    extends:
+      file: base.yaml
+      service: ca
+    environment:
+    - FABRIC_CA_SERVER_CA_CERTFILE=/etc/hyperledger/fabric-ca-server-config/ca.transporter.com-cert.pem
+    - FABRIC_CA_SERVER_CA_KEYFILE=/etc/hyperledger/fabric-ca-server-config/TRANSPORTER_PRIVATE_KEY
+    - FABRIC_CA_SERVER_TLS_CERTFILE=/etc/hyperledger/fabric-ca-server-config/ca.transporter.com-cert.pem
+    - FABRIC_CA_SERVER_TLS_KEYFILE=/etc/hyperledger/fabric-ca-server-config/TRANSPORTER_PRIVATE_KEY
+    volumes:
+    - ./crypto-config/peerOrganizations/transporter.com/ca/:/etc/hyperledger/fabric-ca-server-config
+    ports:
+    - 8054:7054
+    networks:
+    - fabricnetwork
+  cli:
+    image: hyperledger/fabric-tools:${IMAGE_TAG}
+    container_name: cli
+    tty: true
+    environment:
+    - CORE_PEER_TLS_ENABLED=true
+    - GOPATH=/opt/gopath
+    - CORE_LOGGING_LEVEL=DEBUG
+    - CORE_PEER_ID=cli
+    working_dir: /opt/ws
+    volumes:
+    - /var/run/:/host/var/run/
+    - ./:/opt/ws
+    - ./chaincode/github.com:/opt/gopath/src/github.com
+    depends_on:
+    - orderer.orderer.net
+    - peer0.seller.net
+    - peer0.transporter.com
+    - peer0.buyer.com
+    networks:
+    - fabricnetwork
+  couch0:
+    container_name: couch0
+    extends:
+      file: base.yaml
+      service: couchdb
+    ports:
+    - 5984:5984
+    networks:
+    - fabricnetwork
+  couch1:
+    container_name: couch1
+    extends:
+      file: base.yaml
+      service: couchdb
+    ports:
+    - 6984:5984
+    networks:
+    - fabricnetwork
+  couch2:
+    container_name: couch2
+    extends:
+      file: base.yaml
+      service: couchdb
+    ports:
+    - 7984:5984
+    networks:
+    - fabricnetwork
+  orderer.orderer.net:
+    container_name: orderer.orderer.net
+    extends:
+      file: base.yaml
+      service: orderer
+    volumes:
+    - ./genesis.block:/var/hyperledger/orderer/genesis.block
+    - ./crypto-config/ordererOrganizations/orderer.net/orderers/orderer.orderer.net/msp:/var/hyperledger/orderer/msp
+    - ./crypto-config/ordererOrganizations/orderer.net/orderers/orderer.orderer.net/tls/:/var/hyperledger/orderer/tls
+    ports:
+    - 7050:7050
+    networks:
+    - fabricnetwork
+  peer0.buyer.com:
+    container_name: peer0.buyer.com
+    extends:
+      file: base.yaml
+      service: peer
+    environment:
+    - CORE_PEER_ID=peer0.buyer.com
+    - CORE_PEER_ADDRESS=peer0.buyer.com:7051
+    - CORE_PEER_CHAINCODELISTENADDRESS=peer0.buyer.com:7052
+    - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.buyer.com:7051
+    - CORE_PEER_LOCALMSPID=BuyerMSP
+    - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+    - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couch2:5984
+    - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.buyer.com:7051
+    volumes:
+    - /var/run/:/host/var/run/
+    - ./crypto-config/peerOrganizations/buyer.com/peers/peer0.buyer.com/msp:/etc/hyperledger/fabric/msp
+    - ./crypto-config/peerOrganizations/buyer.com/peers/peer0.buyer.com/tls:/etc/hyperledger/fabric/tls
+    ports:
+    - 9051:7051
+    - 9053:7053
+    depends_on:
+    - couch2
+    - orderer.orderer.net
+    networks:
+    - fabricnetwork
+  peer0.seller.net:
+    container_name: peer0.seller.net
+    extends:
+      file: base.yaml
+      service: peer
+    environment:
+    - CORE_PEER_ID=peer0.seller.net
+    - CORE_PEER_ADDRESS=peer0.seller.net:7051
+    - CORE_PEER_CHAINCODELISTENADDRESS=peer0.seller.net:7052
+    - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.seller.net:7051
+    - CORE_PEER_LOCALMSPID=SellerMSP
+    - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+    - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couch0:5984
+    - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.seller.net:7051
+    volumes:
+    - /var/run/:/host/var/run/
+    - ./crypto-config/peerOrganizations/seller.net/peers/peer0.seller.net/msp:/etc/hyperledger/fabric/msp
+    - ./crypto-config/peerOrganizations/seller.net/peers/peer0.seller.net/tls:/etc/hyperledger/fabric/tls
+    ports:
+    - 7051:7051
+    - 7053:7053
+    depends_on:
+    - couch0
+    - orderer.orderer.net
+    networks:
+    - fabricnetwork
+  peer0.transporter.com:
+    container_name: peer0.transporter.com
+    extends:
+      file: base.yaml
+      service: peer
+    environment:
+    - CORE_PEER_ID=peer0.transporter.com
+    - CORE_PEER_ADDRESS=peer0.transporter.com:7051
+    - CORE_PEER_CHAINCODELISTENADDRESS=peer0.transporter.com:7052
+    - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.transporter.com:7051
+    - CORE_PEER_LOCALMSPID=TransporterMSP
+    - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+    - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couch1:5984
+    - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.transporter.com:7051
+    volumes:
+    - /var/run/:/host/var/run/
+    - ./crypto-config/peerOrganizations/transporter.com/peers/peer0.transporter.com/msp:/etc/hyperledger/fabric/msp
+    - ./crypto-config/peerOrganizations/transporter.com/peers/peer0.transporter.com/tls:/etc/hyperledger/fabric/tls
+    ports:
+    - 8051:7051
+    - 8053:7053
+    depends_on:
+    - couch1
+    - orderer.orderer.net
+    networks:
+    - fabricnetwork

@@ -1,0 +1,38 @@
+OrdererOrgs:
+- Domain: orderer.net
+  Name: Orderer
+  Specs:
+  - SANS:
+    - localhost
+  - Hostname: orderer
+PeerOrgs:
+- CA:
+    Hostname: ca
+  Domain: seller.net
+  Name: Seller
+  Template:
+    Count: 1
+    SANS:
+    - localhost
+  Users:
+    Count: 1
+- CA:
+    Hostname: ca
+  Domain: transporter.com
+  Name: Transporter
+  Template:
+    Count: 1
+    SANS:
+    - localhost
+  Users:
+    Count: 1
+- CA:
+    Hostname: ca
+  Domain: buyer.com
+  Name: Buyer
+  Template:
+    Count: 1
+    SANS:
+    - localhost
+  Users:
+    Count: 1
